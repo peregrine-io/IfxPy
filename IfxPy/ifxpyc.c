@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////////
-// Copyright 2017 OpenInformix
+// Copyright 2017-2020 OpenInformix
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,13 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// Authors:
-//      Sathyanesh Krishnan
-//      Javier Sagrera
-//
-////////////////////////////////////////////////////////////////////////////
-
 /*
++----------------------------------------------------------------------+
+| Authors: Sathyanesh Krishnan, Javier Sagrera, Rohit Pandey           |
+|                                                                      |
++----------------------------------------------------------------------+
+////////////////////////////////////////////////////////////////////////////
 +--------------------------------------------------------------------------+
 | Authors: Manas Dadarkar, Salvador Ledezma, Sushant Koduru,               |
 |   Lynh Nguyen, Kanchana Padmanabhan, Dan Scott, Helmut Tessarek,         |
@@ -65,233 +64,6 @@ static PyObject *persistent_list;
 // True global resources - no need for thread safety here 
 static struct _IfxPy_globals *IfxPy_globals;
 
-static void _python_IfxPy_check_sql_errors(
-    SQLHANDLE handle,
-    SQLSMALLINT hType,
-    int rc,
-    int cpy_to_global,
-    char* ret_str,
-    int API,
-    SQLSMALLINT recno);
-
-static int _python_IfxPy_assign_options(
-    void* handle,
-    int type,
-    long opt_key,
-    PyObject *data);
-
-static SQLWCHAR* getUnicodeDataAsSQLWCHAR(
-    PyObject *pyobj,
-    int *isNewBuffer);
-
-static PyObject* getSQLWCharAsPyUnicodeObject(
-    SQLWCHAR* sqlwcharData,
-    SQLLEN sqlwcharBytesLen);
-
-
-
-// Defines a linked list structure for error messages 
-typedef struct _error_msg_node
-{
-    char                    err_msg [DB_MAX_ERR_MSG_LEN];
-    struct _error_msg_node  *next;
-} error_msg_node;
-
-// Defines a linked list structure for caching param data 
-typedef struct _param_cache_node
-{
-    SQLSMALLINT     data_type;              // Datatype 
-    SQLULEN         param_size;             // param size 
-    SQLSMALLINT     nullable;               // is Nullable 
-    SQLSMALLINT     scale;                  // Decimal scale 
-    SQLUINTEGER     file_options;           // File options if PARAM_FILE 
-    SQLLEN          bind_indicator;         // indicator variable for SQLBindParameter 
-    int             param_num;              // param number in stmt 
-    int             param_type;             // Type of param - INP/OUT/INP-OUT/FILE 
-    int             size;                   // Size of param 
-    char            *varname;               // bound variable name 
-    PyObject        *var_pyvalue;           // bound variable value 
-    SQLLEN          ivalue;                 // Temp storage value SQLINTEGER->SQLLEN
-    double          fvalue;                 // Temp storage value 
-    char            *svalue;                // Temp storage value 
-    SQLWCHAR        *uvalue;                // Temp storage value 
-    DATE_STRUCT     *date_value;            // Temp storage value 
-    TIME_STRUCT     *time_value;            // Temp storage value 
-    TIMESTAMP_STRUCT *ts_value;             // Temp storage value 
-    SQL_INTERVAL_STRUCT *interval_value;    // Temp storage value
-    struct _param_cache_node *next;         // Pointer to next node 
-} param_node;
-
-typedef struct _conn_handle_struct
-{
-    PyObject_HEAD
-        SQLHANDLE   henv;
-    SQLHANDLE   hdbc;
-    long        auto_commit;
-    long        c_bin_mode;
-    long        c_case_mode;
-    long        c_cursor_type;
-    long        c_use_wchar;
-    int         handle_active;
-    SQLSMALLINT error_recno_tracker;
-    SQLSMALLINT errormsg_recno_tracker;
-    int         flag_pconnect; // Indicates that this connection is persistent 
-} conn_handle;
-
-static void _python_IfxPy_free_conn_struct(conn_handle *handle);
-
-static PyTypeObject conn_handleType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "IfxPy.IFXConnection",              // tp_name
-    sizeof(conn_handle),                    // tp_basicsize
-    0,                                      // tp_itemsize
-    (destructor)_python_IfxPy_free_conn_struct, // tp_dealloc
-    0,                                      // tp_print
-    0,                                      // tp_getattr
-    0,                                      // tp_setattr
-    0,                                      // tp_compare
-    0,                                      // tp_repr
-    0,                                      // tp_as_number
-    0,                                      // tp_as_sequence
-    0,                                      // tp_as_mapping
-    0,                                      // tp_hash 
-    0,                                      // tp_call
-    0,                                      // tp_str
-    0,                                      // tp_getattro
-    0,                                      // tp_setattro
-    0,                                      // tp_as_buffer
-    Py_TPFLAGS_DEFAULT,                     // tp_flags
-    "Informix Server connection object",    // tp_doc 
-    0,                                      // tp_traverse 
-    0,                                      // tp_clear 
-    0,                                      // tp_richcompare 
-    0,                                      // tp_weaklistoffset 
-    0,                                      // tp_iter 
-    0,                                      // tp_iternext 
-    0,                                      // tp_methods 
-    0,                                      // tp_members 
-    0,                                      // tp_getset 
-    0,                                      // tp_base 
-    0,                                      // tp_dict 
-    0,                                      // tp_descr_get 
-    0,                                      // tp_descr_set 
-    0,                                      // tp_dictoffset 
-    0,                                      // tp_init 
-};
-
-
-
-typedef union
-{
-    SQLINTEGER          i_val;
-    SQLDOUBLE           d_val;
-    SQLFLOAT            f_val;
-    SQLSMALLINT         s_val;
-    SQLCHAR             *str_val;
-    SQLREAL             r_val;
-    SQLWCHAR            *w_val;
-    TIMESTAMP_STRUCT    *ts_val;
-    DATE_STRUCT         *date_val;
-    TIME_STRUCT         *time_val;
-    SQL_INTERVAL_STRUCT *interval_val;
-} IfxPy_row_data_type;
-
-
-typedef struct
-{
-    SQLLEN               out_length;
-    IfxPy_row_data_type data;
-} IfxPy_row_type;
-
-typedef struct _IfxPy_result_set_info_struct
-{
-    SQLCHAR       *name;
-    SQLSMALLINT   type;
-    SQLULEN       size;
-    SQLSMALLINT   scale;
-    SQLSMALLINT   nullable;
-    unsigned char *mem_alloc;  // Mem free
-} IfxPy_result_set_info;
-
-typedef struct _row_hash_struct
-{
-    PyObject *hash;
-} row_hash_struct;
-
-typedef struct _stmt_handle_struct
-{
-    PyObject_HEAD
-    SQLHANDLE   hdbc;
-    SQLHANDLE   hstmt;
-	conn_handle	*connhandle;
-    long        s_bin_mode;
-    long        cursor_type;
-    long        s_case_mode;
-    long        s_use_wchar;
-    SQLSMALLINT error_recno_tracker;
-    SQLSMALLINT errormsg_recno_tracker;
-
-    // Parameter Caching variables 
-    param_node  *head_cache_list;
-    param_node  *current_node;
-
-    int         num_params; // Number of Params 
-    int         file_param; // if option passed in is FILE_PARAM 
-    int         num_columns;
-    IfxPy_result_set_info  *column_info;
-    IfxPy_row_type         *row_data;
-} stmt_handle;
-
-static void _python_IfxPy_free_stmt_struct(stmt_handle *handle);
-
-static PyTypeObject stmt_handleType = {
-    PyVarObject_HEAD_INIT(NULL, 0)
-    "IfxPy.IFXStatement",   // tp_name             
-    sizeof(stmt_handle),        // tp_basicsize             
-    0,                          // tp_itemsize        
-    (destructor)_python_IfxPy_free_stmt_struct, // tp_dealloc    
-    0,                          // tp_print            
-    0,                          // tp_getattr         
-    0,                          // tp_setattr         
-    0,                          // tp_compare         
-    0,                          // tp_repr            
-    0,                          // tp_as_number        
-    0,                          // tp_as_sequence     
-    0,                          // tp_as_mapping      
-    0,                          // tp_hash            
-    0,                          // tp_call            
-    0,                          // tp_str             
-    0,                          // tp_getattro        
-    0,                          // tp_setattro        
-    0,                          // tp_as_buffer        
-    Py_TPFLAGS_DEFAULT,         // tp_flags            
-    "Informix Server cursor object", // tp_doc        
-    0,                          // tp_traverse        
-    0,                          // tp_clear          
-    0,                          // tp_richcompare    
-    0,                          // tp_weaklistoffset 
-    0,                          // tp_iter            
-    0,                          // tp_iternext        
-    0,                          // tp_methods        
-    0,                          // tp_members        
-    0,                          // tp_getset         
-    0,                          // tp_base            
-    0,                          // tp_dict            
-    0,                          // tp_descr_get      
-    0,                          // tp_descr_set      
-    0,                          // tp_dictoffset     
-    0,                          // tp_init            
-};
-
-
-
-/////////////////// Dummy fields ///////////////////////////
-#define SQL_ATTR_PING_DB 0
-#define SQL_FILE_READ 0
-//#define SQL_DATABASE_CODEPAGE 0
-//#define SQL_APPLICATION_CODEPAGE 0
-//#define SQL_CONNECT_CODEPAGE 0
-
 
 SQLRETURN SQLBindFileToParam(
     SQLHSTMT          StatementHandle,           // hstmt 
@@ -320,7 +92,6 @@ static void python_IfxPy_init_globals(struct _IfxPy_globals *IfxPy_globals)
     memset(IfxPy_globals->__python_conn_err_state, 0, SQL_SQLSTATE_SIZE + 1);
     memset(IfxPy_globals->__python_stmt_err_state, 0, SQL_SQLSTATE_SIZE + 1);
 }
-
 
 
 char *estrdup(char *data)

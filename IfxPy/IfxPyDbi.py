@@ -1,5 +1,5 @@
 #//////////////////////////////////////////////////////////////////////////
-# Copyright 2017 OpenInformix
+# Copyright 2017-2020 OpenInformix
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,9 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-# Authors:
-#      Sathyanesh Krishnan
-#      Javier Sagrera
+# +----------------------------------------------------------------------+
+# | Authors: Sathyanesh Krishnan, Javier Sagrera, Rohit Pandey           |
+# |                                                                      |
+# +----------------------------------------------------------------------+
 #
 #//////////////////////////////////////////////////////////////////////////
 
@@ -36,7 +37,7 @@ if sys.version_info >= (3, ):
    buffer = memoryview
 if sys.version_info < (3, ):
    import exceptions
-   exception = exceptions.StandardError
+   exception = exceptions.Exception
 else:
    exception = Exception
 
@@ -211,7 +212,7 @@ def Binary(string):
     inserting it into a binary type column in the database.
 
     """
-    if not isinstance( string, (types.StringType, types.BufferType) ):
+    if not isinstance( string, (bytes, memoryview) ):
         raise InterfaceError("Binary function expects type string argument.")
     return buffer(string)
 
@@ -954,7 +955,7 @@ class Cursor(object):
     def __iter__( self ):
         return self
 
-    def next( self ):
+    def __next__( self ):
         row = self.fetchone()
         if row == None:
             raise StopIteration
@@ -1055,14 +1056,14 @@ class Cursor(object):
             self.messages.append(InterfaceError("callproc expects the first argument to be of type String or Unicode."))
             raise self.messages[len(self.messages) - 1]
         if parameters is not None:
-            if not isinstance(parameters, (types.ListType, types.TupleType)):
+            if not isinstance(parameters, (list, tuple)):
                 self.messages.append(InterfaceError("callproc expects the second argument to be of type list or tuple."))
                 raise self.messages[len(self.messages) - 1]
         result = self._callproc_helper(procname, parameters)
         return_value = None
         self.__description = None
         self._all_stmt_handlers = []
-        if isinstance(result, types.TupleType):
+        if isinstance(result, tuple):
             self.stmt_handler = result[0]
             return_value = result[1:]
         else:
@@ -1204,7 +1205,7 @@ class Cursor(object):
             self.messages.append(InterfaceError("execute expects the first argument [%s] to be of type String or Unicode." % operation ))
             raise self.messages[len(self.messages) - 1]
         if parameters is not None:
-            if not isinstance(parameters, (types.ListType, types.TupleType, types.DictType)):
+            if not isinstance(parameters, (list, tuple, dict)):
                 self.messages.append(InterfaceError("execute parameters argument should be sequence."))
                 raise self.messages[len(self.messages) - 1]
         self.__description = None
@@ -1229,7 +1230,7 @@ class Cursor(object):
             self.messages.append(InterfaceError("executemany expects a not None seq_parameters value"))
             raise self.messages[len(self.messages) - 1]
 
-        if not isinstance(seq_parameters, (types.ListType, types.TupleType)):
+        if not isinstance(seq_parameters, (list, tuple)):
             self.messages.append(InterfaceError("executemany expects the second argument to be of type list or tuple of sequence."))
             raise self.messages[len(self.messages) - 1]
 
@@ -1326,7 +1327,7 @@ class Cursor(object):
         It takes the number of rows to fetch as an argument.  If this 
         is not provided it fetches self.arraysize number of rows. 
         """
-        if not isinstance(size, (int, long)):
+        if not isinstance(size, int):
             self.messages.append(InterfaceError( "fetchmany expects argument type int or long."))
             raise self.messages[len(self.messages) - 1]
         if size == 0:
