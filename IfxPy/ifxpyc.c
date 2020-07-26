@@ -64,12 +64,14 @@ static PyObject *persistent_list;
 // True global resources - no need for thread safety here 
 static struct _IfxPy_globals *IfxPy_globals;
 
+#ifdef HAVE_SMARTTRIGGER
 // ********** Smart Trigger Start ********************** //
 
 short static gCounter = 0;
 IFMX_REGISTER_SMART_TRIGGER  gSmartTriggerRegister[NUM_OF_SMART_TRIGGER_REGISTRATION];
 IFMX_OPEN_SMART_TRIGGER      gopenSmartTrigger;
 IFMX_JOIN_SMART_TRIGGER      gJoinSmartTrigger;
+#endif  // HAVE_SMARTTRIGGER
 
 static PyObject *my_callback[NUM_OF_SMART_TRIGGER_REGISTRATION];
 
@@ -511,6 +513,7 @@ static void _python_IfxPy_check_sql_errors(SQLHANDLE handle, SQLSMALLINT hType, 
     }
 }
 
+#ifdef HAVE_SMARTTRIGGER
 static PyObject *IfxPy_join_smart_trigger_session(PyObject *self, PyObject *args)
 {
 	PyObject *result = NULL;
@@ -1225,6 +1228,7 @@ static PyObject *IfxPy_register_smart_trigger_loop(PyObject *self, PyObject *arg
 {
 	return _python_IfxPy_register_smart_trigger_helper(self, args, TRUE);
 }
+#endif  // HAVE_SMARTTRIGGER
 
 /*    static int _python_IfxPy_assign_options( void *handle, int type, long opt_key, PyObject *data ) */
 static int _python_IfxPy_assign_options(void *handle, int type, long opt_key, PyObject *data)
@@ -12160,13 +12164,14 @@ static PyMethodDef IfxPy_Methods[] = {
     { "tables", (PyCFunction)IfxPy_tables, METH_VARARGS, "Returns a result set listing the tables and associated metadata in a database" },
     { "get_last_serial_value", (PyCFunction)IfxPy_get_last_serial_value, METH_VARARGS, "Returns last serial value inserted for identity column" },
     { "SpeedTestWithCPrimeCount", (PyCFunction)SpeedTestWithCPrimeCount, METH_VARARGS, "Used for Speed Test C & Python function by counting number of prime numbers between X and Y" },
+#ifdef HAVE_SMARTTRIGGER
     { "open_smart_trigger", (PyCFunction)IfxPy_open_smart_trigger, METH_VARARGS, "Open Smart Trigger session" },
 	{ "get_smart_trigger_session_id", (PyCFunction)IfxPy_get_smart_trigger_sessionID, METH_VARARGS, "Get already opened Smart Trigger session ID" },
 	{ "join_smart_trigger_session", (PyCFunction)IfxPy_join_smart_trigger_session, METH_VARARGS, "Join already opened Smart Trigger session ID" },
 	{ "register_smart_trigger_loop", (PyCFunction)IfxPy_register_smart_trigger_loop, METH_VARARGS, "Open Smart Trigger session with loop handled by Python" },
 	{ "register_smart_trigger_no_loop", (PyCFunction)IfxPy_register_smart_trigger_no_loop, METH_VARARGS, "Open Smart Trigger session with loop handled by application" },
 	{ "delete_smart_trigger_session", (PyCFunction)IfxPy_delete_smart_trigger_session, METH_VARARGS, "Delete opened Smart Trigger session" },
-
+#endif  // HAVE_SMARTTRIGGER
     // An end-of-listing sentinel:
     { NULL, NULL, 0, NULL }
 };

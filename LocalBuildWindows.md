@@ -90,6 +90,8 @@ python setup.py build > out.txt 2>&1
 # C:\work\IfxPy\IfxPy\build\lib.win-amd64-3.6\IfxPy.cp36-win_amd64.pyd
 ```
 
+If your CSDK version is 4.10 or older, use build option `--disable_smart_triggers` to avoid build failure.
+
 
 #### Other Build Options
 -------------------------

@@ -42,6 +42,12 @@ machine_bits =  8 * struct.calcsize("P")
 is64Bit = True
 csdk_home = os.environ['CSDK_HOME']
 py_home = os.environ['MY_PY_DIR']
+definitions = [('HAVE_SMARTTRIGGER', None)]  # available from CSDK 4.50
+
+if "--disable_smart_triggers" in sys.argv:
+    definitions.remove(('HAVE_SMARTTRIGGER', None))
+    sys.stdout.write("Smart triggers disabled.\n")
+    sys.argv.remove("--disable_smart_triggers")
 
 if machine_bits == 64:
     is64Bit = True
@@ -54,12 +60,14 @@ if('win32' in sys.platform):
     IfxPyNative_ext_modules = Extension('IfxPy',
         include_dirs = [py_home + '\\include', csdk_home + '\\incl\\cli'],
         libraries = ['iclit09b'],
+        define_macros=definitions,
         library_dirs = [ py_home + '\libs', csdk_home + '\lib'],
         sources = ['ifxpyc.c'])
 else:
     IfxPyNative_ext_modules = Extension('IfxPy',
         include_dirs = [ py_home,  py_home + '/Include', csdk_home +'/incl/cli'],
         libraries = ['ifdmr', 'thcli'],
+        define_macros=definitions,
         library_dirs = [ csdk_home + '/lib/cli', py_home + '/Lib'],
         sources = ['ifxpyc.c'])
 
