@@ -5699,7 +5699,11 @@ static PyObject *_python_IfxPy_prepare_helper(conn_handle *conn_res, PyObject *p
             py_stmt = PyUnicode_FromObject(py_stmt);
             if (py_stmt != NULL &&  py_stmt != Py_None)
             {
+#if PY_MAJOR_VERSION >=3 && PY_MINOR_VERSION >= 3
+                stmt_size = (int)PyUnicode_GetLength(py_stmt);
+#else
                 stmt_size = (int)PyUnicode_GetSize(py_stmt);
+#endif
             }
             else
             {
@@ -6069,7 +6073,11 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
                     curr->uvalue = NULL;
                 }
                 curr->uvalue = getUnicodeDataAsSQLWCHAR(bind_data, &isNewBuffer);
+#if PY_MAJOR_VERSION >=3 && PY_MINOR_VERSION >= 3
+                curr->ivalue = PyUnicode_GetLength(bind_data);
+#else
                 curr->ivalue = PyUnicode_GetSize(bind_data);
+#endif
                 curr->ivalue = curr->ivalue * sizeof(SQLWCHAR);
             }
             param_length = curr->ivalue;
