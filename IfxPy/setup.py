@@ -40,8 +40,15 @@ IfxPy_modules = ['IfxPyDbi']
 
 machine_bits =  8 * struct.calcsize("P")
 is64Bit = True
-csdk_home = os.environ['CSDK_HOME']
+informixdir = os.getenv('INFORMIXDIR', None)
+if not informixdir:
+    raise ValueError("INFORMIXDIR environment variable must be set!)")
+csdk_home = os.getenv('CSDK_HOME')
+if not csdk_home:
+    raise ValueError("INFORMIXDIR environment variable must be set!)")
 py_home = os.environ['MY_PY_DIR']
+if not py_home:
+    raise ValueError("MY_PY_DIR environment variable must be set!)")
 definitions = [('HAVE_SMARTTRIGGER', None)]  # available from CSDK 4.50
 
 if "--disable_smart_triggers" in sys.argv:
