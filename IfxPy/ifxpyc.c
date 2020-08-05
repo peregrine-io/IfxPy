@@ -14,18 +14,18 @@
 // limitations under the License.
 //
 /*
-+----------------------------------------------------------------------+
-| Authors: Sathyanesh Krishnan, Javier Sagrera, Rohit Pandey           |
-|                                                                      |
-+----------------------------------------------------------------------+
-////////////////////////////////////////////////////////////////////////////
-+--------------------------------------------------------------------------+
-| Authors: Manas Dadarkar, Salvador Ledezma, Sushant Koduru,               |
-|   Lynh Nguyen, Kanchana Padmanabhan, Dan Scott, Helmut Tessarek,         |
-|   Sam Ruby, Kellen Bombardier, Tony Cairns, Abhigyan Agrawal,            |
-|   Tarun Pasrija, Rahul Priyadarshi, Akshay Anand, Saba Kauser ,          |
-|   Hemlata Bhatt                                                          |
-+--------------------------------------------------------------------------+
++------------------------------------------------------------------------------+
+| Authors: Sathyanesh Krishnan, Javier Sagrera, Rohit Pandey, Shilpa S Jadhav  |
+|         								       |                               |	
++------------------------------------------------------------------------------+
+///////////////////////////////////////////////////////////////////////////////
++------------------------------------------------------------------------------+
+| Authors: Manas Dadarkar, Salvador Ledezma, Sushant Koduru,                   |
+|   Lynh Nguyen, Kanchana Padmanabhan, Dan Scott, Helmut Tessarek,             |
+|   Sam Ruby, Kellen Bombardier, Tony Cairns, Abhigyan Agrawal,                |
+|   Tarun Pasrija, Rahul Priyadarshi, Akshay Anand, Saba Kauser ,              |
+|   Hemlata Bhatt                                                              |
++------------------------------------------------------------------------------+
 */
 
 #define MODULE_RELEASE "2.0.7"
@@ -281,6 +281,13 @@ static void _python_IfxPy_free_result_struct(stmt_handle* handle)
                 case SQL_BIGINT:
                 case SQL_DECIMAL:
                 case SQL_NUMERIC:
+		case SQL_INFX_RC_SET:
+		case SQL_INFX_RC_MULTISET:
+		case SQL_INFX_RC_LIST:
+		case SQL_INFX_RC_ROW:
+	 	case SQL_INFX_RC_COLLECTION:
+		case SQL_INFX_UDT_FIXED:
+		case SQL_INFX_UDT_VARYING:
                     if (handle->row_data [i].data.str_val != NULL)
                     {
                         PyMem_Del(handle->row_data [i].data.str_val);
@@ -1564,6 +1571,13 @@ static int _python_IfxPy_bind_column_helper(stmt_handle *stmt_res)
         case SQL_CHAR:
         case SQL_VARCHAR:
         case SQL_LONGVARCHAR:
+	case SQL_INFX_RC_SET:
+        case SQL_INFX_RC_MULTISET:
+        case SQL_INFX_RC_LIST:
+        case SQL_INFX_RC_ROW:
+        case SQL_INFX_RC_COLLECTION:
+	case SQL_INFX_UDT_FIXED:
+	case SQL_INFX_UDT_VARYING:
             if (stmt_res->s_use_wchar == WCHAR_NO)
             {
                 in_length = stmt_res->column_info [i].size + 1;
@@ -1584,6 +1598,7 @@ static int _python_IfxPy_bind_column_helper(stmt_handle *stmt_res)
                 }
                 break;
             }
+
         case SQL_WCHAR:
         case SQL_WVARCHAR:
             in_length = stmt_res->column_info [i].size + 1;
@@ -2933,8 +2948,8 @@ static PyObject *IfxPy_bind_param(PyObject *self, PyObject *args)
     {
         size = PyInt_AS_LONG(py_size);
     }
-
-    if (!NIL_P(py_stmt_res))
+    
+     if (!NIL_P(py_stmt_res))
     {
         if (!PyObject_TypeCheck(py_stmt_res, &stmt_handleType))
         {
@@ -5428,6 +5443,7 @@ static int _python_IfxPy_do_prepare(SQLHANDLE hdbc, SQLWCHAR *stmt, int stmt_siz
     return rc;
 }
 
+
 /*!# IfxPy.exec
 *
 * ===Description
@@ -5945,7 +5961,7 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
     switch (TYPE(bind_data))
     {
     case PYTHON_FIXNUM:
-        if (curr->data_type == SQL_BIGINT || curr->data_type == SQL_DECIMAL)
+        if (curr->data_type == SQL_BIGINT || curr->data_type == SQL_DECIMAL )
         {
             PyObject *tempobj = NULL;
 #if  PY_MAJOR_VERSION >= 3
@@ -6032,7 +6048,6 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
 
     case PYTHON_FLOAT:
         curr->fvalue = PyFloat_AsDouble(bind_data);
-
         Py_BEGIN_ALLOW_THREADS;
         rc = SQLBindParameter(stmt_res->hstmt, curr->param_num,
                               curr->param_type, SQL_C_DOUBLE, curr->data_type, curr->param_size,
@@ -6053,7 +6068,7 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
             if (PyObject_CheckBuffer(bind_data) && ( 
                 curr->data_type == SQL_BINARY
 		|| curr->data_type == SQL_VARBINARY
-		|| curr->data_type == SQL_LONGVARBINARY))
+		|| curr->data_type == SQL_LONGVARBINARY || curr->data_type == SQL_INFX_RC_SET))
             {
 #if  PY_MAJOR_VERSION >= 3
                 Py_buffer tmp_buffer;
@@ -6065,6 +6080,7 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
                 curr->ivalue = buffer_len;
 #endif
             }
+	    
             else
             {
                 if (curr->uvalue != NULL)
@@ -6112,6 +6128,7 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
 
             if (isNewBuffer == 0)
             {
+		
                 /* actually make a copy, since this will uvalue will be freed explicitly */
                 SQLWCHAR* tmp = (SQLWCHAR*)ALLOC_N(SQLWCHAR, curr->ivalue + 1);
                 memcpy(tmp, curr->uvalue, (param_length + sizeof(SQLWCHAR)));
@@ -6124,7 +6141,6 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
                 PyMem_Del(curr->uvalue);
                 curr->uvalue = tmp;
             }
-
             switch (curr->data_type)
             {
 
@@ -6153,6 +6169,24 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
                 }
                 paramValuePtr = (SQLPOINTER)(curr->uvalue);
                 break;
+
+	    case SQL_INFX_RC_SET:
+	    case SQL_INFX_RC_MULTISET:
+            case SQL_INFX_RC_LIST:
+            case SQL_INFX_RC_ROW:
+            case SQL_INFX_RC_COLLECTION:
+	    case SQL_INFX_UDT_FIXED:
+            case SQL_INFX_UDT_VARYING:
+     	        if (curr->param_type == SQL_PARAM_OUTPUT ||curr->param_type == SQL_PARAM_INPUT_OUTPUT) {
+                            curr->bind_indicator = param_length;
+                            paramValuePtr = (SQLPOINTER)curr;
+                        } else {
+                            curr->bind_indicator = SQL_DATA_AT_EXEC;
+                            paramValuePtr = (SQLPOINTER)(curr);
+                        }
+                        valueType = SQL_C_BINARY; 
+                        break;
+
             default:
                 valueType = SQL_C_WCHAR;
                 curr->bind_indicator = param_length;
@@ -6272,6 +6306,24 @@ static int _python_IfxPy_bind_data(stmt_handle *stmt_res, param_node *curr, PyOb
                 }
                 paramValuePtr = (SQLPOINTER)(curr->svalue);
                 break;
+
+  	   case SQL_INFX_RC_SET:
+           case SQL_INFX_RC_MULTISET:
+	   case SQL_INFX_RC_ROW:
+	   case SQL_INFX_RC_LIST:
+	   case SQL_INFX_RC_COLLECTION:
+	   case SQL_INFX_UDT_FIXED:
+           case SQL_INFX_UDT_VARYING:
+		        if (curr->param_type == SQL_PARAM_OUTPUT ||curr->param_type == SQL_PARAM_INPUT_OUTPUT) {
+                            curr->bind_indicator = param_length;
+                            paramValuePtr = (SQLPOINTER)curr;
+                        } else {
+                            curr->bind_indicator = SQL_DATA_AT_EXEC;
+                            paramValuePtr = (SQLPOINTER)(curr);
+                        }
+                        valueType = SQL_C_BINARY;
+                        break;
+
             default:
                 valueType = SQL_C_CHAR;
                 curr->bind_indicator = curr->ivalue;
@@ -8189,6 +8241,27 @@ static PyObject *IfxPy_field_type(PyObject *self, PyObject *args)
     case SQL_INTERVAL_MINUTE_TO_SECOND:
         str_val = "interval";
         break;
+    case SQL_INFX_RC_SET:
+	    str_val = "set";
+	    break;
+    case SQL_INFX_RC_MULTISET:
+	    str_val = "multiset";
+	    break;
+    case SQL_INFX_RC_ROW:
+	    str_val = "row";
+	    break;
+    case SQL_INFX_RC_LIST:
+	    str_val = "list";
+	    break;
+    case SQL_INFX_RC_COLLECTION:
+	    str_val = "collection";
+	    break;
+    case SQL_INFX_UDT_FIXED:
+	    str_val = "udt_fixed";
+	    break;
+    case SQL_INFX_UDT_VARYING:
+	    str_val = "udt_varying";
+	    break;
     default:
         str_val = "string";
         break;
@@ -8598,6 +8671,13 @@ static PyObject *IfxPy_result(PyObject *self, PyObject *args)
         case SQL_BIGINT:
         case SQL_DECIMAL:
         case SQL_NUMERIC:
+        case SQL_INFX_RC_SET:
+        case SQL_INFX_RC_MULTISET:	
+	case SQL_INFX_RC_COLLECTION:
+	case SQL_INFX_RC_ROW:
+	case SQL_INFX_RC_LIST:
+	case SQL_INFX_UDT_FIXED:
+	case SQL_INFX_UDT_VARYING:
             if (column_type == SQL_DECIMAL || column_type == SQL_NUMERIC)
             {
                 in_length = stmt_res->column_info [col_num].size +
@@ -9281,7 +9361,82 @@ static PyObject *_python_IfxPy_bind_fetch_helper(PyObject *args, int op)
                     }                 
                 }
                 break;
+           
+	   case SQL_INFX_RC_SET:
+	   case SQL_INFX_RC_COLLECTION:
+	   case SQL_INFX_RC_MULTISET:
+	   case SQL_INFX_RC_ROW:
+	   case SQL_INFX_RC_LIST:
+	   case SQL_INFX_UDT_FIXED:
+           case SQL_INFX_UDT_VARYING:
+		if (column_type == SQL_INFX_RC_SET || column_type == SQL_INFX_RC_MULTISET 
+			|| column_type == SQL_INFX_RC_COLLECTION 
+			|| column_type == SQL_INFX_RC_ROW 
+			|| column_type == SQL_INFX_UDT_FIXED || column_type == SQL_INFX_UDT_VARYING) {
+                        len_terChar = sizeof(SQLCHAR);
+                        targetCType = SQL_C_BINARY;
+                    } else if (len_terChar == -1) {
+                        break;
+                    }
+                    out_ptr = (void *)ALLOC_N(char, INIT_BUFSIZ + len_terChar);
+                    if (out_ptr == NULL) {
+                        PyErr_SetString(PyExc_Exception,
+                            "Failed to Allocate Memory for Collection/UDT Data");
+                        return NULL;
+                    }
+                    rc = _python_IfxPy_get_data(stmt_res, column_number + 1, targetCType, out_ptr,
+               	      INIT_BUFSIZ + len_terChar, &out_length);
+                    if (rc == SQL_SUCCESS_WITH_INFO) {
+                        void *tmp_out_ptr = NULL;
 
+                        tmp_out_ptr = (void *)ALLOC_N(char, out_length + INIT_BUFSIZ + len_terChar);
+                        memcpy(tmp_out_ptr, out_ptr, INIT_BUFSIZ);
+                        PyMem_Del(out_ptr);
+                        out_ptr = tmp_out_ptr;
+
+                        rc = _python_IfxPy_get_data(stmt_res, column_number + 1, targetCType, (char *)out_ptr + INIT_BUFSIZ,
+                            out_length + len_terChar, &out_length);
+                        if (rc == SQL_ERROR) {
+                            if (out_ptr != NULL) {
+                                PyMem_Del(out_ptr);
+				out_ptr = NULL;
+                            }
+                            sprintf(error, "Failed to fetch Collection/UDT  Data: %s",
+                                IFX_G(__python_stmt_err_msg));
+                            PyErr_SetString(PyExc_Exception, error);
+                            return NULL;
+                        }
+
+
+                        if (len_terChar == sizeof(SQLWCHAR)) {
+                            value = getSQLWCharAsPyUnicodeObject(out_ptr, INIT_BUFSIZ + out_length);
+                        } else {
+                            value = PyBytes_FromStringAndSize((char *)row_data->str_val, out_length);
+                        }
+                    } else if ( rc == SQL_ERROR ) {
+                        PyMem_Del(out_ptr);
+                        out_ptr = NULL;
+                        sprintf(error, "Failed to Collection/UDT  Data: %s",
+                            IFX_G(__python_stmt_err_msg));
+                        PyErr_SetString(PyExc_Exception, error);
+                        return NULL;
+                    } else {
+                        if (out_length == SQL_NULL_DATA) {
+                            Py_INCREF(Py_None);
+                            value = Py_None;
+                        } else {
+                            if (len_terChar == sizeof(SQLWCHAR)) {
+                                value =  getSQLWCharAsPyUnicodeObject(out_ptr, out_length);
+                            } else {
+                                value = PyBytes_FromStringAndSize((char*)out_ptr, out_length);
+                            }
+                        }
+                  }
+                    if (out_ptr != NULL) {
+                        PyMem_Del(out_ptr);
+                        out_ptr = NULL;
+                    }
+                    break;
             default:
                 Py_INCREF(Py_None);
                 value = Py_None;
@@ -11410,7 +11565,14 @@ static PyObject* IfxPy_execute_many(PyObject *self, PyObject *args)
                             case SQL_BINARY:
                             case SQL_LONGVARBINARY:
                             case SQL_VARBINARY:
-                                valueType = SQL_C_BINARY;
+			    case SQL_INFX_RC_MULTISET:
+			    case SQL_INFX_RC_SET:
+			    case SQL_INFX_RC_ROW:
+			    case SQL_INFX_RC_LIST:
+			    case SQL_INFX_RC_COLLECTION:
+		     	    case SQL_INFX_UDT_FIXED:
+           		    case SQL_INFX_UDT_VARYING:	
+                                valueType = SQL_C_BINARY; 
                                 break;
                             default:
                                 valueType = SQL_C_WCHAR;
@@ -11422,6 +11584,13 @@ static PyObject* IfxPy_execute_many(PyObject *self, PyObject *args)
                             case SQL_BINARY:
                             case SQL_LONGVARBINARY:
                             case SQL_VARBINARY:
+                            case SQL_INFX_RC_MULTISET:
+                            case SQL_INFX_RC_SET:
+			    case SQL_INFX_RC_ROW:
+			    case SQL_INFX_RC_LIST:
+			    case SQL_INFX_RC_COLLECTION:
+			    case SQL_INFX_UDT_FIXED:
+           		    case SQL_INFX_UDT_VARYING:
                                 valueType = SQL_C_BINARY;
                                 break;
                             default:
@@ -12293,6 +12462,14 @@ INIT_IfxPy(void)
     PyModule_AddIntConstant(m, "SQL_DBMS_NAME", SQL_DBMS_NAME);
     PyModule_AddIntConstant(m, "SQL_DBMS_VER", SQL_DBMS_VER);
     PyModule_AddIntConstant(m, "SQL_API_SQLROWCOUNT", SQL_API_SQLROWCOUNT);
+    PyModule_AddIntConstant(m, "SQL_INFX_RC_COLLECTION", SQL_INFX_RC_COLLECTION);	
+    PyModule_AddIntConstant(m, "SQL_INFX_RC_LIST", SQL_INFX_RC_LIST);
+    PyModule_AddIntConstant(m, "SQL_INFX_RC_SET", SQL_INFX_RC_SET);
+    PyModule_AddIntConstant(m, "SQL_INFX_RC_MULTISET", SQL_INFX_RC_MULTISET);
+    PyModule_AddIntConstant(m, "SQL_INFX_RC_ROW", SQL_INFX_RC_ROW);
+    PyModule_AddIntConstant(m, "SQL_INFX_UDT_FIXED", SQL_INFX_UDT_FIXED);
+    PyModule_AddIntConstant(m, "SQL_INFX_UDT_VARYING", SQL_INFX_UDT_VARYING);
+
     PyModule_AddStringConstant(m, "__version__", MODULE_RELEASE);
 
     Py_INCREF(&stmt_handleType);

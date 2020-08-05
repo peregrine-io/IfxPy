@@ -182,7 +182,7 @@ my_Sample()
 ```
 
 ---
-#### Param Binding
+#### Param Binding of Basic Data Types
 
 ```python
 # Sample2.py
@@ -267,6 +267,104 @@ my_Sample()
 
 ```
 
+---
+#### Param Binding of Collection and User Defined Data Types
+
+```python
+# Sample3.py
+import IfxPy
+
+
+def my_Sample():
+    ConStr = "SERVER=ids0;DATABASE=db1;HOST=127.0.0.1;SERVICE=9088;UID=informix;PWD=xxxxx;"
+
+    try:
+        # netstat -a | findstr  9088
+        conn = IfxPy.connect( ConStr, "", "")
+    except Exception as e:
+        print ('ERROR: Connect failed')
+        print ( e )
+        quit()
+    
+    try:
+        sql = "drop table rc_create;"
+        print ( sql )
+        stmt = IfxPy.exec_immediate(conn, sql)
+    except:
+        print ('FYI: drop table failed')
+
+    sql = "DROP ROW TYPE if exists details RESTRICT;"
+    IfxPy.exec_immediate(conn, sql)
+
+    sql = "DROP ROW TYPE if exists udt_t1 RESTRICT;"
+    IfxPy.exec_immediate(conn, sql)
+
+    sql = "CREATE ROW TYPE details(name varchar(15), addr varchar(15), zip varchar(15) );"
+    stmt = IfxPy.exec_immediate(conn, sql)
+
+    sql = "CREATE ROW TYPE udt_t1(name varchar(20), zip int);"
+    stmt = IfxPy.exec_immediate(conn, sql)
+
+    sql = "CREATE TABLE udt_tab1 (c1 int, c2 SET(CHAR(10)NOT NULL), c3 MULTISET(int not null), c4 LIST(int not null), c5 details, c6 udt_t1 );"
+    stmt = IfxPy.exec_immediate(conn, sql)
+
+    sql = "INSERT INTO udt_tab1 VALUES (?, ?, ?, ?, ?, ?);"
+    stmt = IfxPy.prepare(conn, sql)
+
+    c1 = None
+    c2 = None
+    c3 = None
+    c4 = None
+    c5 = None
+    c6 = None
+
+    print("Bind the params");
+    IfxPy.bind_param(stmt, 1, c1, IfxPy.SQL_PARAM_INPUT, IfxPy.SQL_INTEGER)
+    IfxPy.bind_param(stmt, 2, c2, IfxPy.SQL_PARAM_INPUT, IfxPy.SQL_CHAR,  IfxPy.SQL_INFX_RC_COLLECTION)
+    IfxPy.bind_param(stmt, 3, c3, IfxPy.SQL_PARAM_INPUT, IfxPy.SQL_CHAR, IfxPy.SQL_INFX_RC_COLLECTION)
+    IfxPy.bind_param(stmt, 4, c4, IfxPy.SQL_PARAM_INPUT, IfxPy.SQL_CHAR, IfxPy.SQL_INFX_RC_COLLECTION)
+    IfxPy.bind_param(stmt, 5, c5, IfxPy.SQL_PARAM_INPUT, IfxPy.SQL_CHAR, IfxPy.SQL_INFX_UDT_FIXED)
+    IfxPy.bind_param(stmt, 6, c6, IfxPy.SQL_PARAM_INPUT, IfxPy.SQL_CHAR, IfxPy.SQL_INFX_UDT_VARYING)
+    i = 0
+    while i < 3:
+        i += 1
+        c1 = 100+i
+        c2 = "SET{'test', 'test1'}"
+        c3 = "MULTISET{1,2,3}"
+        c4 = "LIST{10, 20}"
+        c5 = "ROW('Pune', 'City', '411061')"
+        c6 = "ROW('Mumbai', 11111)"
+        IfxPy.execute(stmt, (c1, c2, c3, c4, c5, c6));
+
+
+    print("Selecting Records ......")
+    sql = "SELECT * FROM udt_tab1"
+    stmt = IfxPy.exec_immediate(conn, sql)
+    tu = IfxPy.fetch_tuple(stmt)
+    rc = 0
+    while tu != False:
+        rc += 1
+        print( tu)
+        tu = IfxPy.fetch_tuple(stmt)
+
+    print()
+    print( "Total Record Inserted {}".format(i) )
+    print( "Total Record Selected {}".format(rc) )
+
+    # Free up memory used by result and then stmt too
+    IfxPy.free_result(stmt)
+    IfxPy.free_stmt (stmt)
+
+    # close the connection
+    IfxPy.close(conn)
+
+    print ("Done")
+
+####### Run the sample function ######
+my_Sample()
+
+
+```
 
 
 ### [Python Database API Specification v2.0](http://www.python.org/dev/peps/pep-0249/)
