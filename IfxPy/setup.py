@@ -38,8 +38,6 @@ IfxPy_modules = ['IfxPyDbi']
 #                ('IfxPySample', ['../Examples/DbAPI_Sample_Params.py']),
 #                ('IfxPySample', ['./LICENSE.txt']) ]
 
-machine_bits =  8 * struct.calcsize("P")
-is64Bit = True
 informixdir = os.getenv('INFORMIXDIR', None)
 if not informixdir:
     raise ValueError("INFORMIXDIR environment variable must be set!)")
@@ -68,11 +66,13 @@ if csdk_version and int(csdk_version[0]) >= 4 and int(csdk_version[1]) >= 50:
 else:
     sys.stdout.write("Smart triggers are not available.\n")
 
+
+machine_bits =  8 * struct.calcsize("P")
+is64Bit = False
 if machine_bits == 64:
     is64Bit = True
     sys.stdout.write("Detected 64-bit Python\n")
 else:
-    is64Bit = False
     sys.stdout.write("Detected 32-bit Python\n")
 
 if('win32' in sys.platform):
