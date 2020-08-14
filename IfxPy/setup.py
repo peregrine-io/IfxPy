@@ -43,10 +43,10 @@ is64Bit = True
 informixdir = os.getenv('INFORMIXDIR', None)
 if not informixdir:
     raise ValueError("INFORMIXDIR environment variable must be set!)")
-csdk_home = os.getenv('CSDK_HOME')
+csdk_home = os.getenv('CSDK_HOME', None)
 if not csdk_home:
-    raise ValueError("INFORMIXDIR environment variable must be set!)")
-py_home = os.environ['MY_PY_DIR']
+    raise ValueError("CSDK_HOME environment variable must be set!)")
+py_home = os.getenv('MY_PY_DIR', None)
 if not py_home:
     raise ValueError("MY_PY_DIR environment variable must be set!)")
 
