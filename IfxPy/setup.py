@@ -49,12 +49,24 @@ if not csdk_home:
 py_home = os.environ['MY_PY_DIR']
 if not py_home:
     raise ValueError("MY_PY_DIR environment variable must be set!)")
-definitions = [('HAVE_SMARTTRIGGER', None)]  # available from CSDK 4.50
 
-if "--disable_smart_triggers" in sys.argv:
-    definitions.remove(('HAVE_SMARTTRIGGER', None))
-    sys.stdout.write("Smart triggers disabled.\n")
-    sys.argv.remove("--disable_smart_triggers")
+# Detect CSDK version
+# Smart triggers are available from CSDK 4.50
+vers_csdk_file = os.path.join(informixdir, 'etc', '.lvers_csdk')
+csdk_version = None
+if os.path.exists(vers_csdk_file):
+    with open(vers_csdk_file, 'r') as file:
+        csdk_version = file.read().strip().split('.')
+    sys.stdout.write("Found CSDK " + ".".join(csdk_version) + ".\n")
+else:
+    sys.stdout.write("Warning: Could not detect CDSK version.\n")
+
+definitions = []
+if csdk_version and int(csdk_version[0]) >= 4 and int(csdk_version[1]) >= 50:
+    definitions = [('HAVE_SMARTTRIGGER', None)]
+    sys.stdout.write("Smart triggers are enabled.\n")
+else:
+    sys.stdout.write("Smart triggers are not available.\n")
 
 if machine_bits == 64:
     is64Bit = True
