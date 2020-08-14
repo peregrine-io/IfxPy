@@ -678,20 +678,20 @@ Returns a result set listing the tables and associated metadata in a database.
 * IfxPy.get_last_serial_value:  
 Returns last serial value inserted for identity column.
 
-* IfxPy.open_smart_trigger: 
+* IfxPy.open_smart_trigger:  
 Open Smart Trigger session
 
-* IfxPy.get_smart_trigger_session_id:
+* IfxPy.get_smart_trigger_session_id:  
 Get already opened Smart Trigger session ID
 
-* IfxPy.join_smart_trigger_session:
+* IfxPy.join_smart_trigger_session:  
 Join already opened Smart Trigger session ID
 
-* IfxPy.register_smart_trigger_loop:
+* IfxPy.register_smart_trigger_loop:  
 Open Smart Trigger session with loop handled by Informix Python driver
 
-* IfxPy.register_smart_trigger_no_loop:
+* IfxPy.register_smart_trigger_no_loop:  
 Open Smart Trigger session with loop handled by Informix Python application
 
-* IfxPy.delete_smart_trigger_session:
+* IfxPy.delete_smart_trigger_session:  
 Delete opened Smart Trigger session
