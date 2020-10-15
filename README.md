@@ -15,7 +15,10 @@ pip install ifxpy
 or  # if Python 3.x then
 pip3 install ifxpy
 ```
-
+Informix Python driver version 3.0.4 onward, you no more require prior installation of Informix CSDK(Client Software Development Kit) on Windows 64-bit and Linux 64-bit platforms. 
+The install script will take care of installing/downloading the required depenedencies for CSDK/ODBC on 64-bit platforms. There will be "onedb-odbc-driver" folder created in your "site-packages" folder of your respective
+platforms when you install the Python driver. This folder "onedb-odbc-driver" could be used to set the value of INFORMIXDIR (see Runtime Environment section below for more information). You don't need to download CSDK for
+your Python applications requirement. Hence downloading and installing CSDK is optional from Python driver version 3.0.4 onward.
 
 The **pip install support** is available for **Windows 64, Linux x86_64, Arm7** for both **Python 2.7 and Python 3.4 and up**. For all other platform you may perform a local build. The driver source code is platform neutral and it is expected to build on any platform.
 

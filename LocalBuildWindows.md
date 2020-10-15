@@ -2,10 +2,9 @@
 ----------------
 ##### Prerequisite:
 * [Python 2.7 or above](https://www.python.org/downloads/) or [Python 3.4 or above](https://www.python.org/downloads/)
-* Informix client SDK 410xC2 or above
-* Set environment variable **CSDK_HOME** and **MY_PY_DIR**
 * If Python 2.7 then Visual Studio 2008 or above
 * If Python 3.x then Visual Studio 2015 or above
+* Informix Client SDK(CSDK) 4.10.xC2 or above for 32-bit platforms. Its optional for 64-bit platforms, for 64-bit platforms build phase will take care of resolving dependencies on CSDK/ODBC.
 * setuptools
 * pip
 * wheel
@@ -29,8 +28,9 @@ git clone https://github.com/OpenInformix/IfxPy.git
 
 ### Shell Environment needed for the build
 -------------------------------------------
-Set **CSDK_HOME** and **MY_PY_DIR** environment variables.  
-The environment **CSDK_HOME** points to the **Informix Client SDK**.   
+Set **CSDK_HOME**(Optional, see below) and **MY_PY_DIR** environment variables.  
+The environment **CSDK_HOME** points to the **Informix Client SDK**. If you don't have CSDK installed, in the build phase it will download/install CSDK/ODBC in the MY_PY_DIR\build\lib.win* folder "onedb-odbc-driver" 
+and internally will be set to CSDK_HOME.
 The environment **MY_PY_DIR** points to the Python source code installation.  
 
 #### [Python 2.7 build shell environment](LocalBuildWindows.md)
@@ -112,6 +112,7 @@ python setup.py bdist_wheel
 # pip install  dist\IfxPy-<driver version>-cp36-cp36m-win_amd64.whl
 # For example:
 pip install  dist\IfxPy-3.0.1-cp36-cp36m-win_amd64.whl
+Post successful installation of wheel file, you would see "onedb-odbc-driver" in the "site-packages" directory. The "onedb-odbc-driver" could be used to set the value of INFORMIXDIR for runtime. 
 ```
 
 

@@ -1,15 +1,31 @@
 import os
 import sys
 import struct
-from setuptools import setup
+from setuptools import setup, find_packages
 from distutils.core import Extension
+import tarfile
+import zipfile
+import shutil
+import glob
+import platform
+
+if sys.version_info >= (3, ):
+    from urllib import request
+    from io import BytesIO
+else:
+    import urllib2 as request
+    from cStringIO import StringIO as BytesIO
+
+from distutils.sysconfig import get_python_lib
+from setuptools.command.build_ext import build_ext
+from setuptools.command.install import install
 
 # Writing the Setup Script
 # https://docs.python.org/3.4/distutils/setupscript.html#distutils-installing-scripts
 
 
 PACKAGE   = 'IfxPy'
-VERSION   = '3.0.3'
+VERSION   = '3.0.4'
 VERSION2X = '2.7.1'
 LICENSE   = 'Apache License 2.0'
 IfxPyLongDescription='Informix native Python driver is a high performing data access interface suitable for highly scalable enterprise and IoT solutions to works with Informix database.'
@@ -38,42 +54,118 @@ IfxPy_modules = ['IfxPyDbi']
 #                ('IfxPySample', ['../Examples/DbAPI_Sample_Params.py']),
 #                ('IfxPySample', ['./LICENSE.txt']) ]
 
-informixdir = os.getenv('INFORMIXDIR', None)
-if not informixdir:
-    raise ValueError("INFORMIXDIR environment variable must be set!)")
-csdk_home = os.getenv('CSDK_HOME', None)
-if not csdk_home:
-    raise ValueError("CSDK_HOME environment variable must be set!)")
-py_home = os.getenv('MY_PY_DIR', None)
-if not py_home:
-    raise ValueError("MY_PY_DIR environment variable must be set!)")
-
-# Detect CSDK version
-# Smart triggers are available from CSDK 4.50
-vers_csdk_file = os.path.join(informixdir, 'etc', '.lvers_csdk')
-csdk_version = None
-if os.path.exists(vers_csdk_file):
-    with open(vers_csdk_file, 'r') as file:
-        csdk_version = file.read().strip().split('.')
-    sys.stdout.write("Found CSDK " + ".".join(csdk_version) + ".\n")
-else:
-    sys.stdout.write("Warning: Could not detect CDSK version.\n")
-
-definitions = []
-if csdk_version and int(csdk_version[0]) >= 4 and int(csdk_version[1]) >= 50:
-    definitions = [('HAVE_SMARTTRIGGER', None)]
-    sys.stdout.write("Smart triggers are enabled.\n")
-else:
-    sys.stdout.write("Smart triggers are not available.\n")
-
-
 machine_bits =  8 * struct.calcsize("P")
 is64Bit = False
+prefix = ''
+
 if machine_bits == 64:
     is64Bit = True
     sys.stdout.write("Detected 64-bit Python\n")
 else:
     sys.stdout.write("Detected 32-bit Python\n")
+	
+if('win32' in sys.platform):
+	os_ = 'win'
+	cliFileName = 'OneDB-Win64-ODBC-Driver.zip'
+	prefix = 'build/lib.win-amd64-' + str(sys.version_info[0])+"."+str(sys.version_info[1]) + '/'
+elif ('linux' in sys.platform):
+	os_ = 'linux'
+	cliFileName = 'OneDB-Linux64-ODBC-Driver.tar'
+	prefix = 'build/lib.linux-'+ platform.processor() + '-' + str(sys.version_info[0])+"."+str(sys.version_info[1]) + '/'
+else:
+	cliFileName = 'Unknown'
+
+informixdir = os.getenv('INFORMIXDIR', '')
+csdk_home = os.getenv('CSDK_HOME', '')
+
+# Only 64-bit Automated ODBC install is supported, prior installation of CSDK continues to be required for 32-bit 
+if is64Bit == True and not informixdir and not csdk_home:
+	tmp_path = os.getcwd()
+	pip_odbc_path = os.path.join(tmp_path, 'onedb-odbc-driver')
+	cpath=''
+	cpath1=''
+
+	if not os.path.isdir(pip_odbc_path):
+		#url = 'http://127.0.0.1:8000/' + cliFileName
+		url = 'https://hcl-onedb.github.io/odbc/' + cliFileName
+		sys.stdout.write("Downloading : %s\n" % (url))
+		sys.stdout.flush();
+
+		pip_odbc_path = os.path.join(tmp_path, prefix + 'onedb-odbc-driver')
+		cpath1 = os.getcwd()
+		src = os.path.join(cpath1, prefix + 'onedb-odbc-driver')
+		
+		file_stream = BytesIO(request.urlopen(url).read())
+		if (os_ == 'win'):
+			sys.stdout.write("Extracting Windows ODBC files : %s\n" % (url))
+			cliDriver_zip = zipfile.ZipFile(file_stream)
+			cliDriver_zip.extractall(prefix)
+		else:
+			sys.stdout.write("Extracting Linux ODBC files : %s\n" % (url))
+			cliDriver_tar = tarfile.open(fileobj=file_stream)
+			cliDriver_tar.extractall(prefix)
+	else:
+		cpath = os.getcwd()
+		pip_odbc_path = os.path.join(cpath, prefix + 'onedb-odbc-driver')
+		if not os.path.isdir(pip_odbc_path):
+			#url = 'http://127.0.0.1:8000/' + cliFileName
+			url = 'https://hcl-onedb.github.io/odbc/' + cliFileName
+			sys.stdout.write("Downloading : %s\n" % (url))
+			sys.stdout.flush();
+
+			file_stream = BytesIO(request.urlopen(url).read())
+			if (os_ == 'win'):
+				sys.stdout.write("Extracting Windows ODBC files : %s\n" % (url))
+				cliDriver_zip = zipfile.ZipFile(file_stream)
+				cliDriver_zip.extractall(prefix)
+				#cliDriver_zip.extractall()
+			else:
+				sys.stdout.write("Extracting Linux ODBC files : %s\n" % (url))
+				cliDriver_tar = tarfile.open(fileobj=file_stream)
+				cliDriver_tar.extractall(prefix)
+				#cliDriver_tar.extractall()
+	
+if not informixdir:
+	cpath = os.getcwd()
+	pip_odbc_path = os.path.join(cpath, prefix + 'onedb-odbc-driver')
+	if not os.path.isdir(pip_odbc_path):
+		raise ValueError("INFORMIXDIR environment variable must be set!)")
+	else:
+		informixdir = pip_odbc_path
+		
+if not csdk_home:
+	cpath = os.getcwd()
+	pip_odbc_path = os.path.join(cpath, prefix + 'onedb-odbc-driver')
+	if not os.path.isdir(pip_odbc_path):
+		raise ValueError("CSDK_HOME environment variable must be set!)")
+	else:
+		csdk_home = pip_odbc_path
+		
+py_home = os.getenv('MY_PY_DIR', '')
+if not py_home:
+	cpath = os.getcwd()
+	if not os.path.isdir(cpath):
+		raise ValueError("MY_PY_DIR environment variable must be set!)")
+	else:
+		py_home = cpath
+		
+# Detect CSDK version
+# Smart triggers are available from CSDK 4.50/1.0.0.0
+vers_csdk_file = os.path.join(informixdir, 'etc', '.lvers_csdk')
+csdk_version = None
+if os.path.exists(vers_csdk_file):
+    with open(vers_csdk_file, 'r') as file:
+        csdk_version = file.read().strip().split('.')
+else:
+    sys.stdout.write("Warning: Could not detect CDSK version.\n")
+
+definitions = []
+#OneDB CSDK/ODBC supports Smart Trigger from version 1.0.0.0 onward.
+if csdk_version and ( (int(csdk_version[0]) >= 4 and int(csdk_version[1]) >= 50) or (int(csdk_version[0]) == 1 and int(csdk_version[1]) >= 0) ):
+    definitions = [('HAVE_SMARTTRIGGER', None)]
+    sys.stdout.write("Smart Triggers are enabled.\n")
+else:
+    sys.stdout.write("Smart Triggers are not available.\n")
 
 if('win32' in sys.platform):
     IfxPyNative_ext_modules = Extension('IfxPy',
@@ -157,4 +249,5 @@ setup (name    = PACKAGE,
     #    data_files   = data_files,
     #    include_package_data = True,
        **extra
-      )
+      ) 
+

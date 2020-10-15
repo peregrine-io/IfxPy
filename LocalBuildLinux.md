@@ -4,8 +4,7 @@
 * [Python 2.7 or above](https://www.python.org/downloads)
 * [Python 3.4 or above](https://www.python.org/downloads)
 * setuptools (pip/pip3 install setuptools)
-* Informix client SDK 410xC2 or above
-* Set environment variable CSDK_HOME and MY_PY_DIR
+* Informix Client SDK(CSDK) 4.10.xC2 or above for 32-bit platforms. Its optional for 64-bit platforms, for 64-bit platforms build phase will take care of resolving dependencies on CSDK/ODBC.
 * Operating System Unicode encoding should match with your python interpreter encoding. 
 * setuptools
 * pip
@@ -17,8 +16,6 @@ You may need pip version version 10.0.1 or higher, if not upgrade
 # pip3 install --upgrade pip
 pip install --upgrade pip
 ```
-
-**MY_PY_DIR** points to the Python installation directory. During the driver build it need python header files, if the current Python installation doesn’t have the header file then you may need to get Python source code.
 
 ##### FYI: Unicode encoding
 The python interpreter used should match with operating system default Unicode encoding. 
@@ -112,8 +109,9 @@ git clone https://github.com/OpenInformix/IfxPy.git
 ```bash
 # sudo ln -s /home/informix/1210UC9 /work/informix
 # Assuming 'CSDK' is installed at /work/informix
-export CSDK_HOME=/work/informix
-export MY_PY_DIR=/work/dev/Python
+export CSDK_HOME=/work/informix <= This is optional on 64-bit platforms. If you don't have CSDK installed, in the build phase it will download/install CSDK/ODBC in the MY_PY_DIR\build\lib.linux* folder "onedb-odbc-driver" 
+and internally will be set to CSDK_HOME. The "onedb-odbc-driver" could be used to set the value of INFORMIXDIR for runtime.
+export MY_PY_DIR=/work/dev/Python <= If not set, then internally, it will use "current directory" to set the value of MY_PY_DIR.
 export PATH=/work/dev/Python:$PATH
 ```
 
@@ -208,6 +206,7 @@ ls /work/t1/IfxPy/IfxPy/dist/IfxPy-3.0.1-cp35-cp35m-linux_x86_64.whl
 cp /work/t1/IfxPy/IfxPy/dist/IfxPy-3.0.1-cp35-cp35m-linux_x86_64.whl /work/t1/IfxPy/prebuilt/3x/Linux64/.
 # FYI: to install
 # pip3 install /work/t1/IfxPy/prebuilt/3x/Linux64/IfxPy-3.0.1-cp35-cp35m-linux_x86_64.whl
+Post successful installation of wheel file, you would see "onedb-odbc-driver" in the "site-packages" directory. The "onedb-odbc-driver" could be used to set the value of INFORMIXDIR for runtime.
 
 
 ######### ARM v7
