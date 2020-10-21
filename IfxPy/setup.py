@@ -25,7 +25,7 @@ from setuptools.command.install import install
 
 
 PACKAGE   = 'IfxPy'
-VERSION   = '3.0.4'
+VERSION   = '3.0.5'
 VERSION2X = '2.7.1'
 LICENSE   = 'Apache License 2.0'
 IfxPyLongDescription='Informix native Python driver is a high performing data access interface suitable for highly scalable enterprise and IoT solutions to works with Informix database.'
