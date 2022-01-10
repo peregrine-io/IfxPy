@@ -186,9 +186,7 @@ else:
 # Supporting both Python 2 and Python 3 with Setuptools
 # http://setuptools.readthedocs.io/en/latest/python3.html
 extra = {}
-if sys.version_info >= (3, ):
-    extra['use_2to3'] = True
-else:
+if sys.version_info < (3, ):
     VERSION    = VERSION2X
     PYTHON_REQ = PYTHON_REQ_2X
 
